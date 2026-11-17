@@ -117,81 +117,50 @@ const userOwnershipRule: PolicyRule = (subject, action, resource) => {
 };
 
 /**
- * Checks whether a given timestamp falls within business hours (08:00 - 18:00 Mon-Fri)
- * in the specified IANA timezone (accurately accounting for DST boundaries).
+ * // TODO(workshop): Task 1 - Implement Business Hours Checker
+ *
+ * Requirements:
+ * 1. Checks whether a timestamp falls between 08:00:00 (inclusive) and 18:00:00 (exclusive)
+ *    Monday through Friday in the specified IANA timezone (default: "America/New_York").
+ * 2. Must accurately handle Day Light Saving (DST) boundaries.
+ * 3. Saturdays and Sundays must return false.
+ * 4. At 17:59:59 -> returns true. At 18:00:00 -> returns false.
+ *
+ * Hint: See workshop/task1-time-window.md for instructions and guidance.
  */
 export function isWithinBusinessHours(
-  timestamp: number,
-  timezone: string = "America/New_York",
+  _timestamp: number,
+  _timezone: string = "America/New_York",
 ): boolean {
-  const date = new Date(timestamp);
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    weekday: "short",
-    hour: "numeric",
-    minute: "numeric",
-    second: "numeric",
-    hour12: false,
-  });
-
-  const parts = formatter.formatToParts(date);
-  let weekday = "";
-  let hour = 0;
-  let minute = 0;
-  let second = 0;
-
-  for (const part of parts) {
-    if (part.type === "weekday") weekday = part.value;
-    if (part.type === "hour") hour = parseInt(part.value, 10);
-    if (part.type === "minute") minute = parseInt(part.value, 10);
-    if (part.type === "second") second = parseInt(part.value, 10);
-  }
-
-  if (hour === 24) hour = 0;
-
-  // Monday through Friday only
-  const isWeekend = weekday === "Sat" || weekday === "Sun";
-  if (isWeekend) return false;
-
-  // Business window: 08:00:00 through 17:59:59 (18:00:00 is closed)
-  const totalSeconds = hour * 3600 + minute * 60 + second;
-  const startSeconds = 8 * 3600;      // 08:00:00 (inclusive)
-  const endSeconds = 18 * 3600;       // 18:00:00 (exclusive)
-
-  return totalSeconds >= startSeconds && totalSeconds < endSeconds;
+  // TODO(workshop): Implement business hours & DST calculation
+  return false;
 }
 
 /**
- * Task 1: Time-Window Policy Rule (Solution)
- * Sensitive actions ("delete", "export") are allowed only 08:00-18:00 Mon-Fri
- * in a configurable timezone (default: America/New_York).
+ * // TODO(workshop): Task 1 - Time-Window Policy Rule inside can()
+ *
+ * Requirements:
+ * 1. If action is NOT sensitive (only "delete" and "export" are sensitive), return null.
+ * 2. Resolve clock from context: context.now ?? realClock.
+ * 3. Resolve timezone: context.timezone || process.env.BUSINESS_TIMEZONE || "America/New_York".
+ * 4. Call isWithinBusinessHours(now, timezone).
+ * 5. If NOT in window, return:
+ *    { allow: false, reason: `Sensitive action '${action}' is only permitted during business hours (08:00-18:00 Mon-Fri in ${timezone})` }
+ * 6. If in window, return null (allowing role rules like adminRule to proceed).
+ *
+ * Hint: See workshop/task1-time-window.md
  */
-export const timeWindowRule: PolicyRule = (_subject, action, _resource, context) => {
+export const timeWindowRule: PolicyRule = (_subject, action, _resource, _context) => {
   const sensitiveActions = ["delete", "export"];
   if (!sensitiveActions.includes(action)) {
     return null; // Non-sensitive actions are not restricted by time window
   }
 
-  // Resolve clock: context.now takes precedence; in test mode with no explicit clock,
-  // default to a weekday noon so non-time tests are unaffected; otherwise realClock.
-  const clock =
-    context.now ??
-    (process.env.NODE_ENV === "test"
-      ? () => new Date("2026-06-10T16:00:00Z").getTime() // Wednesday 12:00 PM EDT
-      : realClock);
-
-  const timezone = context.timezone || process.env.BUSINESS_TIMEZONE || "America/New_York";
-  const now = clock();
-
-  const inWindow = isWithinBusinessHours(now, timezone);
-  if (!inWindow) {
-    return {
-      allow: false,
-      reason: `Sensitive action '${action}' is only permitted during business hours (08:00-18:00 Mon-Fri in ${timezone})`,
-    };
-  }
-
-  return null; // Within window; allow role rules to proceed
+  // TODO(workshop): Implement timeWindowRule using isWithinBusinessHours() and context.now
+  return {
+    allow: false,
+    reason: `TODO(workshop): Time-window policy not implemented for '${action}'`,
+  };
 };
 
 // Registered policy rules (evaluated in order until a rule makes a definitive decision)

@@ -1,62 +1,40 @@
 import type { Request, Response, NextFunction } from "express";
 import { realClock, type Clock } from "../lib/clock.js";
-import { logAuditEvent } from "../services/audit.js";
 
 /**
- * createRequireFreshAuth
+ * // TODO(workshop): Task 2 - Implement requireFreshAuth Middleware (Step-Up Auth)
  *
- * Factory that returns an Express middleware enforcing session freshness
- * (step-up re-authentication) for sensitive endpoints.
+ * Requirements:
+ * 1. Verify req.session and req.user exist (return 401 if missing).
+ * 2. Resolve clock: (req.app?.locals?.clock as Clock) ?? defaultClock.
+ * 3. Calculate session age in seconds:
+ *    const createdAt = new Date(req.session.createdAt).getTime();
+ *    const ageSeconds = Math.max(0, Math.floor((now - createdAt) / 1000));
+ * 4. If ageSeconds > maxAgeSeconds:
+ *    a. Log audit event: { userId, action: "step_up_auth_required", resource, decision: "deny", reason, ip, requestId }
+ *    b. Return HTTP 403 Forbidden with JSON:
+ *       {
+ *         error: "Step-up re-authentication required",
+ *         code: "REAUTH_REQUIRED",
+ *         maxAgeSeconds,
+ *         sessionAgeSeconds: ageSeconds
+ *       }
+ * 5. If ageSeconds <= maxAgeSeconds: call next().
  *
- * @param maxAgeSeconds Maximum acceptable session age in seconds (default: 300 = 5 minutes)
- * @param defaultClock Injected clock source (default: realClock)
+ * Hint: See workshop/task2-fresh-auth.md for guidance and examples.
  */
 export const createRequireFreshAuth = (
-  maxAgeSeconds: number = 300,
-  defaultClock: Clock = realClock,
+  _maxAgeSeconds: number = 300,
+  _defaultClock: Clock = realClock,
 ) => {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    // 1. Session must be loaded by preceding authenticate middleware
-    if (!req.session || !req.user) {
-      res.status(401).json({
-        error: "Authentication required",
-        code: "UNAUTHORIZED",
-      });
-      return;
-    }
-
-    // 2. Resolve clock (app-level dynamic clock override takes precedence for tests/demos)
-    const clock: Clock = (req.app?.locals?.clock as Clock) ?? defaultClock;
-    const now = clock();
-
-    // 3. Compute session age relative to session creation time
-    const sessionCreatedAt = new Date(req.session.createdAt).getTime();
-    const ageSeconds = Math.max(0, Math.floor((now - sessionCreatedAt) / 1000));
-
-    // 4. Reject if session is older than the freshness threshold
-    if (ageSeconds > maxAgeSeconds) {
-      await logAuditEvent({
-        userId: req.user.id,
-        action: "step_up_auth_required",
-        resource: req.originalUrl || req.path,
-        decision: "deny",
-        reason: `Session age (${ageSeconds}s) exceeds freshness threshold of ${maxAgeSeconds}s`,
-        ip: req.ip,
-        requestId: req.id,
-      });
-
-      res.status(403).json({
-        error: "Step-up re-authentication required",
-        code: "REAUTH_REQUIRED",
-        maxAgeSeconds,
-        sessionAgeSeconds: ageSeconds,
-      });
-      return;
-    }
-
-    next();
+  return async (_req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    // TODO(workshop): Implement step-up freshness check
+    res.status(403).json({
+      error: "TODO(workshop): requireFreshAuth middleware not implemented",
+      code: "NOT_IMPLEMENTED",
+    });
   };
 };
 
-// Default middleware instance with 5-minute (300 seconds) freshness window
+// Default instance for application routes (5 minutes / 300s window)
 export const requireFreshAuth = createRequireFreshAuth(300);
