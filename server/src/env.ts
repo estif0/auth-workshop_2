@@ -1,7 +1,16 @@
 // Validates env vars at startup using Zod.
 // The server won't start if anything is missing or malformed.
-// This catches "forgot to set BETTER_AUTH_SECRET" before the first request.
+// If not already loaded (e.g. CLI tools like better-auth or drizzle-kit),
+// dotenv loads the root .env file.
+import { config } from "dotenv";
+import { resolve } from "path";
+import { fileURLToPath } from "url";
 import { z } from "zod";
+
+if (!process.env.DATABASE_URL) {
+  const dir = fileURLToPath(new URL(".", import.meta.url));
+  config({ path: resolve(dir, "../../.env") });
+}
 
 const schema = z.object({
   PORT: z.coerce.number().default(4000),
