@@ -1,5 +1,6 @@
 // Re-export Better Auth tables (generated via `npx better-auth generate`)
 export * from "./auth-schema.js";
+import { user, session } from "./auth-schema.js";
 
 import { pgTable, text, timestamp, index } from "drizzle-orm/pg-core";
 
@@ -25,3 +26,7 @@ export const auditLogs = pgTable(
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type NewAuditLog = typeof auditLogs.$inferInsert;
+export type User = typeof user.$inferSelect;
+export type NewUser = typeof user.$inferInsert;
+export type Session = typeof session.$inferSelect;
+export type NewSession = typeof session.$inferInsert;
