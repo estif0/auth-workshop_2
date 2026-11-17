@@ -39,12 +39,20 @@ interface ApiResponse {
   data: any;
 }
 
+interface ClockInfo {
+  simulatedNow: string;
+  timezone: string;
+  inBusinessHours: boolean;
+  isOverridden: boolean;
+}
+
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [sessionsList, setSessionsList] = useState<Session[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [lastResponse, setLastResponse] = useState<ApiResponse | null>(null);
+  const [clockInfo, setClockInfo] = useState<ClockInfo | null>(null);
   const [reauthWarning, setReauthWarning] = useState<{
     message: string;
     maxAgeSeconds: number;
@@ -53,6 +61,19 @@ function App() {
   const [customEmail, setCustomEmail] = useState("");
   const [targetUserId, setTargetUserId] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Fetch current server clock and business hours status
+  const fetchClockInfo = async () => {
+    try {
+      const res = await fetch("/api/dev/clock");
+      if (res.ok) {
+        const data = await res.json();
+        setClockInfo(data);
+      }
+    } catch {
+      // Dev endpoint may be disabled in prod
+    }
+  };
 
   // Check current session on initial page load
   const checkSession = async () => {
@@ -80,6 +101,7 @@ function App() {
 
   useEffect(() => {
     checkSession();
+    fetchClockInfo();
   }, []);
 
   // Fetch active sessions for the current user
@@ -147,6 +169,7 @@ function App() {
         setSession(data.session);
         setReauthWarning(null);
         fetchSessions();
+        fetchClockInfo();
         if (data.user.role === "admin") {
           fetchAuditLogs();
         }
@@ -228,7 +251,17 @@ function App() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ offsetSeconds }),
     });
-    // Trigger /api/me to refresh state
+    fetchClockInfo();
+    checkSession();
+  };
+
+  const handleClockSetHour = async (setHour: number) => {
+    await fetch("/api/dev/clock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ setHour }),
+    });
+    fetchClockInfo();
     checkSession();
   };
 
@@ -239,6 +272,7 @@ function App() {
       body: JSON.stringify({ reset: true }),
     });
     setReauthWarning(null);
+    fetchClockInfo();
     checkSession();
   };
 
@@ -424,17 +458,26 @@ function App() {
             <div className="btn-group">
               <button
                 type="button"
-                onClick={() => handleClockShift(305)}
-                title="Advance clock by 5 minutes and 5 seconds to expire freshness"
+                onClick={() => handleClockSetHour(14)}
+                title="Set simulated time to 2:00 PM today (inside business hours)"
+                className="btn-primary"
               >
-                ⏩ +5m 5s (Expire Freshness)
+                ☀️ Business Hours (2 PM)
               </button>
               <button
                 type="button"
-                onClick={() => handleClockShift(32400)}
-                title="Advance clock by 9 hours (outside business hours)"
+                onClick={() => handleClockSetHour(2)}
+                title="Set simulated time to 2:00 AM tonight (outside business hours)"
+                className="btn-danger"
               >
-                ⏩ +9h (After Hours)
+                🌙 After Hours (2 AM)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleClockShift(305)}
+                title="Advance clock by 5 minutes and 5 seconds to expire freshness"
+              >
+                ⏩ +5m 5s (Freshness)
               </button>
               <button
                 type="button"
@@ -444,6 +487,43 @@ function App() {
                 🔄 Reset Clock
               </button>
             </div>
+
+            {clockInfo && (
+              <div
+                style={{
+                  marginTop: "10px",
+                  fontSize: "12px",
+                  background: "#090d16",
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-color)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>
+                    <strong>Simulated Time:</strong>{" "}
+                    {new Date(clockInfo.simulatedNow).toLocaleTimeString()} ({clockInfo.timezone})
+                  </span>
+                  {clockInfo.isOverridden && (
+                    <span style={{ color: "var(--accent-amber)", fontWeight: 600 }}>
+                      [SIMULATED]
+                    </span>
+                  )}
+                </div>
+                <div style={{ marginTop: "4px" }}>
+                  <strong>Business Window:</strong>{" "}
+                  <span
+                    className={`badge ${
+                      clockInfo.inBusinessHours ? "badge-fresh" : "badge-stale"
+                    }`}
+                  >
+                    {clockInfo.inBusinessHours
+                      ? "OPEN (08:00 - 18:00)"
+                      : "CLOSED (AFTER HOURS)"}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

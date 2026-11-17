@@ -20,7 +20,11 @@ exportRouter.post("/", authenticate, requireRole("admin", "manager"), requireFre
     req.user,
     "export",
     { type: "export" },
-    { ip: req.ip, requestId: req.id },
+    {
+      ip: req.ip,
+      requestId: req.id,
+      now: req.app?.locals?.clock,
+    },
   );
 
   if (!decision.allow) {
