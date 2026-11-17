@@ -26,6 +26,7 @@ import { meRouter } from "./routes/me.js";
 import { adminRouter } from "./routes/admin.js";
 import { usersRouter } from "./routes/users.js";
 import { exportRouter } from "./routes/export.js";
+import { sessionsRouter } from "./routes/sessions.js";
 
 const app = express();
 
@@ -68,6 +69,7 @@ app.use("/api", meRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/export", exportRouter);
+app.use("/api/sessions", sessionsRouter);
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get("/api/health", async (_req, res) => {
