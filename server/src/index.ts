@@ -24,6 +24,8 @@ import { authLimiter, generalLimiter } from "./middleware/rateLimit.js";
 import { devRouter } from "./routes/dev.js";
 import { meRouter } from "./routes/me.js";
 import { adminRouter } from "./routes/admin.js";
+import { usersRouter } from "./routes/users.js";
+import { exportRouter } from "./routes/export.js";
 
 const app = express();
 
@@ -64,6 +66,8 @@ if (
 }
 app.use("/api", meRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/users", usersRouter);
+app.use("/api/export", exportRouter);
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get("/api/health", async (_req, res) => {

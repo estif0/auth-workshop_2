@@ -4,6 +4,8 @@
   "scripts": {
     "server": "npm run dev --prefix server",
     "web": "npm run dev --prefix web",
+    "test": "npm test --prefix server",
+    "check": "npm run check --prefix server",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f postgres"
