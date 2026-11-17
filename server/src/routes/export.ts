@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/authenticate.js";
 import { requireRole } from "../middleware/requireRole.js";
+import { requireFreshAuth } from "../middleware/requireFreshAuth.js";
 import { can } from "../services/authz.js";
 import { db } from "../db/index.js";
 import * as schema from "../db/schema.js";
@@ -11,8 +12,9 @@ export const exportRouter = Router();
 // Requires:
 //   1. authenticate: caller must hold an active session cookie (401 on failure)
 //   2. requireRole("admin", "manager"): coarse-grained role check (403 on failure)
-//   3. can(subject, "export", { type: "export" }): fine-grained policy check
-exportRouter.post("/", authenticate, requireRole("admin", "manager"), async (req, res) => {
+//   3. requireFreshAuth: step-up auth check (session < 5 min old, 403 REAUTH_REQUIRED on failure)
+//   4. can(subject, "export", { type: "export" }): fine-grained policy check
+exportRouter.post("/", authenticate, requireRole("admin", "manager"), requireFreshAuth, async (req, res) => {
   // Evaluate fine-grained authorization engine
   const decision = await can(
     req.user,

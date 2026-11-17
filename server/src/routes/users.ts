@@ -2,6 +2,7 @@ import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { authenticate } from "../middleware/authenticate.js";
 import { requireRole } from "../middleware/requireRole.js";
+import { requireFreshAuth } from "../middleware/requireFreshAuth.js";
 import { can } from "../services/authz.js";
 import { db } from "../db/index.js";
 import * as schema from "../db/schema.js";
@@ -12,9 +13,10 @@ export const usersRouter = Router();
 // Requires:
 //   1. authenticate: caller must hold an active session cookie (401 on failure)
 //   2. requireRole("admin"): coarse-grained role check (403 on failure)
-//   3. can(subject, "delete", { type: "user", id }): fine-grained ABAC policy rule
+//   3. requireFreshAuth: step-up auth check (session < 5 min old, 403 REAUTH_REQUIRED on failure)
+//   4. can(subject, "delete", { type: "user", id }): fine-grained ABAC policy rule
 //      (e.g., prevents admin from deleting their own account to prevent lockout)
-usersRouter.delete("/:id", authenticate, requireRole("admin"), async (req, res) => {
+usersRouter.delete("/:id", authenticate, requireRole("admin"), requireFreshAuth, async (req, res) => {
   const targetId = String(req.params.id);
 
   // Evaluate fine-grained authorization engine

@@ -58,6 +58,16 @@ devRouter.post("/login", async (req, res) => {
   const ctx = await auth.$context;
   const session = await ctx.internalAdapter.createSession(currentUser.id);
 
+  // If a simulated clock is active (tests/demos), synchronize session createdAt with simulated time
+  if (req.app?.locals?.clock) {
+    const simulatedDate = new Date(req.app.locals.clock());
+    await db
+      .update(schema.session)
+      .set({ createdAt: simulatedDate })
+      .where(eq(schema.session.id, session.id));
+    session.createdAt = simulatedDate;
+  }
+
   // 3. Generate HMAC signature for the session cookie
   // Better Auth expects: `${token}.${base64Signature}`
   const signature = await makeSignature(session.token, ctx.secret);
@@ -88,3 +98,45 @@ devRouter.post("/login", async (req, res) => {
     },
   });
 });
+
+// POST /api/dev/clock — Dev-only clock manipulation for workshop demos and automated tests.
+// Allows advancing simulated time (e.g. +301 seconds to trigger REAUTH_REQUIRED)
+// or resetting back to real system time.
+devRouter.post("/clock", (req, res) => {
+  const { offsetSeconds, timestamp, reset } = req.body;
+
+  if (reset) {
+    delete req.app.locals.clock;
+    res.json({
+      success: true,
+      simulatedNow: new Date().toISOString(),
+      reset: true,
+    });
+    return;
+  }
+
+  if (typeof timestamp === "number") {
+    req.app.locals.clock = () => timestamp;
+    res.json({
+      success: true,
+      simulatedNow: new Date(timestamp).toISOString(),
+    });
+    return;
+  }
+
+  if (typeof offsetSeconds === "number") {
+    const targetTime = Date.now() + offsetSeconds * 1000;
+    req.app.locals.clock = () => targetTime;
+    res.json({
+      success: true,
+      offsetSeconds,
+      simulatedNow: new Date(targetTime).toISOString(),
+    });
+    return;
+  }
+
+  res.status(400).json({
+    error: "Provide offsetSeconds, timestamp, or reset: true",
+  });
+});
+
