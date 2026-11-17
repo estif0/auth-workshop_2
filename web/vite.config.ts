@@ -11,7 +11,7 @@ export default defineConfig({
       // This means the browser sees one origin (localhost:5173) and cookies
       // are set on that origin — no CORS issues, no cookie SameSite headaches.
       "/api": {
-        target: "http://localhost:3000",
+        target: "http://localhost:4000",
         changeOrigin: true, // rewrites the Host header to the target
       },
     },

@@ -23,7 +23,7 @@ app.use(
   cors({
     origin: "http://localhost:5173",
     credentials: true, // required for Set-Cookie to work cross-origin
-  })
+  }),
 );
 
 // 2. Better Auth handler goes HERE in Phase 3 (before express.json)
@@ -41,5 +41,7 @@ app.get("/api/health", async (_req, res) => {
 app.listen(env.PORT, () => {
   console.log(`Server listening on http://localhost:${env.PORT}`);
   console.log(`  NODE_ENV: ${env.NODE_ENV}`);
-  console.log(`  DB:       ${env.DATABASE_URL.replace(/:\/\/.*@/, "://<credentials>@")}`);
+  console.log(
+    `  DB:       ${env.DATABASE_URL.replace(/:\/\/.*@/, "://<credentials>@")}`,
+  );
 });
