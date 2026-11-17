@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Environment — never commit secrets
+.env
+.env.local
+
+# Docs — instructor notes, not part of the workshop repo
+docs/
+
+# Build output
+dist/
+
+# Drizzle — generated SQL files ARE committed (they're teaching artifacts)
+# drizzle/ is intentionally NOT listed here
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+
+# Logs
+*.log
+pino.log

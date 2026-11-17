@@ -1,0 +1,11 @@
+{
+  "name": "auth-workshop",
+  "private": true,
+  "scripts": {
+    "server": "npm run dev --prefix server",
+    "web": "npm run dev --prefix web",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f postgres"
+  }
+}
