@@ -150,17 +150,26 @@ export function isWithinBusinessHours(
  *
  * Hint: See workshop/task1-time-window.md
  */
-export const timeWindowRule: PolicyRule = (_subject, action, _resource, _context) => {
+export const timeWindowRule: PolicyRule = (_subject, action, _resource, context) => {
   const sensitiveActions = ["delete", "export"];
   if (!sensitiveActions.includes(action)) {
     return null; // Non-sensitive actions are not restricted by time window
   }
 
   // TODO(workshop): Implement timeWindowRule using isWithinBusinessHours() and context.now
-  return {
-    allow: false,
-    reason: `TODO(workshop): Time-window policy not implemented for '${action}'`,
-  };
+  const timezone = context.timezone || process.env.BUSINESS_TIMEZONE || "America/New_York";
+  const clock = context.now ?? realClock;
+  const now = clock();
+
+  const inWindow = isWithinBusinessHours(now, timezone);
+  if (!inWindow) {
+    return {
+      allow: false,
+      reason: `Sensitive action '${action}' is only permitted during business hours (08:00-18:00 Mon-Fri in ${timezone})`,
+    };
+  }
+
+  return null;
 };
 
 // Registered policy rules (evaluated in order until a rule makes a definitive decision)
