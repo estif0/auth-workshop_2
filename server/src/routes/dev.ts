@@ -6,6 +6,7 @@ import { auth, getAdminEmails } from "../auth.js";
 import { db } from "../db/index.js";
 import * as schema from "../db/schema.js";
 import { env } from "../env.js";
+import { isWithinBusinessHours } from "../services/authz.js";
 
 export const devRouter = Router();
 
@@ -99,18 +100,61 @@ devRouter.post("/login", async (req, res) => {
   });
 });
 
+// GET /api/dev/clock — Returns active simulated or system time, timezone, and business hours status
+devRouter.get("/clock", (req, res) => {
+  const clock = (req.app.locals.clock as (() => number)) ?? (() => Date.now());
+  const now = clock();
+  const timezone =
+    process.env.BUSINESS_TIMEZONE ||
+    Intl.DateTimeFormat().resolvedOptions().timeZone ||
+    "America/New_York";
+
+  res.json({
+    simulatedNow: new Date(now).toISOString(),
+    timezone,
+    inBusinessHours: isWithinBusinessHours(now, timezone),
+    isOverridden: !!req.app.locals.clock,
+  });
+});
+
 // POST /api/dev/clock — Dev-only clock manipulation for workshop demos and automated tests.
-// Allows advancing simulated time (e.g. +301 seconds to trigger REAUTH_REQUIRED)
+// Allows advancing simulated time (+305s for step-up), jumping to specific hours (14:00 or 02:00),
 // or resetting back to real system time.
 devRouter.post("/clock", (req, res) => {
-  const { offsetSeconds, timestamp, reset } = req.body;
+  const { offsetSeconds, timestamp, reset, setHour } = req.body;
+  const timezone =
+    process.env.BUSINESS_TIMEZONE ||
+    Intl.DateTimeFormat().resolvedOptions().timeZone ||
+    "America/New_York";
 
   if (reset) {
     delete req.app.locals.clock;
+    const now = Date.now();
     res.json({
       success: true,
-      simulatedNow: new Date().toISOString(),
+      simulatedNow: new Date(now).toISOString(),
+      timezone,
+      inBusinessHours: isWithinBusinessHours(now, timezone),
       reset: true,
+    });
+    return;
+  }
+
+  if (typeof setHour === "number") {
+    const target = new Date();
+    // If today is a weekend, jump to a Wednesday so business hours simulation works as expected
+    if (target.getDay() === 0 || target.getDay() === 6) {
+      const dayDiff = (3 - target.getDay() + 7) % 7 || 7;
+      target.setDate(target.getDate() + dayDiff);
+    }
+    target.setHours(setHour, 0, 0, 0);
+    const targetTime = target.getTime();
+    req.app.locals.clock = () => targetTime;
+    res.json({
+      success: true,
+      simulatedNow: new Date(targetTime).toISOString(),
+      timezone,
+      inBusinessHours: isWithinBusinessHours(targetTime, timezone),
     });
     return;
   }
@@ -120,23 +164,28 @@ devRouter.post("/clock", (req, res) => {
     res.json({
       success: true,
       simulatedNow: new Date(timestamp).toISOString(),
+      timezone,
+      inBusinessHours: isWithinBusinessHours(timestamp, timezone),
     });
     return;
   }
 
   if (typeof offsetSeconds === "number") {
-    const targetTime = Date.now() + offsetSeconds * 1000;
+    const currentBase = req.app.locals.clock ? req.app.locals.clock() : Date.now();
+    const targetTime = currentBase + offsetSeconds * 1000;
     req.app.locals.clock = () => targetTime;
     res.json({
       success: true,
       offsetSeconds,
       simulatedNow: new Date(targetTime).toISOString(),
+      timezone,
+      inBusinessHours: isWithinBusinessHours(targetTime, timezone),
     });
     return;
   }
 
   res.status(400).json({
-    error: "Provide offsetSeconds, timestamp, or reset: true",
+    error: "Provide offsetSeconds, setHour, timestamp, or reset: true",
   });
 });
 

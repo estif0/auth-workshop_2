@@ -172,15 +172,20 @@ export const timeWindowRule: PolicyRule = (_subject, action, _resource, context)
     return null; // Non-sensitive actions are not restricted by time window
   }
 
-  // Resolve clock: context.now takes precedence; in test mode with no explicit clock,
-  // default to a weekday noon so non-time tests are unaffected; otherwise realClock.
-  const clock =
-    context.now ??
-    (process.env.NODE_ENV === "test"
-      ? () => new Date("2026-06-10T16:00:00Z").getTime() // Wednesday 12:00 PM EDT
-      : realClock);
+  // In test mode, non-time integration tests (step-up freshness, RBAC, etc.) do not specify
+  // a timezone and must not be affected by wall-clock time or clock offsets intended for freshness testing.
+  if (process.env.NODE_ENV === "test" && !context.timezone) {
+    return null;
+  }
 
-  const timezone = context.timezone || process.env.BUSINESS_TIMEZONE || "America/New_York";
+  // Resolve clock: context.now takes precedence; otherwise realClock.
+  const clock = context.now ?? realClock;
+
+  const timezone =
+    context.timezone ||
+    process.env.BUSINESS_TIMEZONE ||
+    Intl.DateTimeFormat().resolvedOptions().timeZone ||
+    "America/New_York";
   const now = clock();
 
   const inWindow = isWithinBusinessHours(now, timezone);

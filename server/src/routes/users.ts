@@ -24,7 +24,11 @@ usersRouter.delete("/:id", authenticate, requireRole("admin"), requireFreshAuth,
     req.user,
     "delete",
     { type: "user", id: targetId },
-    { ip: req.ip, requestId: req.id },
+    {
+      ip: req.ip,
+      requestId: req.id,
+      now: req.app?.locals?.clock,
+    },
   );
 
   if (!decision.allow) {
