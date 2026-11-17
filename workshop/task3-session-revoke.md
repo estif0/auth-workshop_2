@@ -1,16 +1,19 @@
 # Workshop Task 3: Session Revocation & Anti-IDOR Ownership Check
 
 ## Objective
+
 Implement session revocation endpoints (`DELETE /api/sessions/:id` and `POST /api/sessions/revoke-others`) with strict **Insecure Direct Object Reference (IDOR)** protection and structured audit logging.
 
 ---
 
 ## File to Edit
+
 - `server/src/routes/sessions.ts`
 
 ---
 
 ## Background & Real-World Context
+
 What is an IDOR vulnerability in session management?
 If an endpoint simply executes `DELETE FROM session WHERE id = :id` without verifying *who owns the session*, any authenticated user can send random UUIDs or sniffed session IDs and terminate sessions belonging to other users (or even administrators!).
 
@@ -21,6 +24,7 @@ If an endpoint simply executes `DELETE FROM session WHERE id = :id` without veri
 ## Requirements
 
 ### 1. `DELETE /api/sessions/:id`
+
 - Locate the target session by ID in PostgreSQL (`db.select().from(schema.session).where(eq(schema.session.id, targetId))`).
 - If target session is not found: return HTTP `404 { error: "Session not found", code: "NOT_FOUND" }`.
 - **Anti-IDOR Ownership Check:**
@@ -28,18 +32,21 @@ If an endpoint simply executes `DELETE FROM session WHERE id = :id` without veri
   - If they do NOT match:
     - Log audit event with `action: "session_revoke_denied"`, `decision: "deny"`, and `reason: "IDOR prevention: session belongs to another user"`.
     - Return HTTP `403 Forbidden` with:
+
       ```json
       {
         "error": "You are not authorized to revoke a session belonging to another user",
         "code": "FORBIDDEN"
       }
       ```
+
 - Delete the session from PostgreSQL (`db.delete(schema.session).where(...)`).
 - **Self-Revocation Handling:**
   - If `targetSession.id === req.session.id` (user revoked their current session):
     - Clear the session cookie using `res.clearCookie()`.
 - Log audit event with `action: "session_revoke"`, `decision: "allow"`.
 - Return HTTP `200 OK`:
+
   ```json
   {
     "success": true,
@@ -50,9 +57,11 @@ If an endpoint simply executes `DELETE FROM session WHERE id = :id` without veri
   ```
 
 ### 2. `POST /api/sessions/revoke-others`
+
 - Delete all sessions belonging to `req.user.id` EXCEPT the caller's current session (`userId === req.user.id AND id !== req.session.id`).
 - Log audit event with `action: "session_revoke_others"`, `decision: "allow"`, and `reason: "Revoked N other active session(s)"`.
 - Return HTTP `200 OK`:
+
   ```json
   {
     "success": true,
@@ -135,8 +144,11 @@ sessionsRouter.delete("/:id", authenticate, async (req, res) => {
 ---
 
 ## Verification
+
 Run the task test suite:
+
 ```bash
 npx vitest run test/sessions.test.ts
 ```
+
 When your implementation is correct, all 8 tests will pass!

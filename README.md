@@ -189,9 +189,11 @@ The frontend is a lightweight test dashboard built specifically for exploring an
 3. **Step-Up Warning & Dynamic Re-Auth:**
    - When a sensitive endpoint returns `403 REAUTH_REQUIRED`, a warning banner alerts the user with a 1-click **"Re-authenticate Now"** button.
 4. **Time-Travel Simulator (Dev Mode):**
-   - Click `⏩ +5m 5s (Expire Freshness)` to advance the server's simulated clock past the 5-minute freshness window.
-   - Click `⏩ +9h (After Hours)` to advance the clock past business hours to test the ABAC policy.
+   - Click `☀️ Business Hours (2 PM)` to set simulated time to 2:00 PM today (inside business hours).
+   - Click `🌙 After Hours (2 AM)` or `⏩ +9h` to jump outside business hours (to test ABAC time-window rejection).
+   - Click `⏩ +5m 5s (Freshness)` to advance the server's simulated clock past the 5-minute freshness window.
    - Click `🔄 Reset Clock` to restore real system time.
+   - Live banner displays the active simulated time, detected timezone, and an `OPEN (08:00 - 18:00)` vs `CLOSED (AFTER HOURS)` status badge.
 5. **Session Management Table:**
    - View all active sessions, IP addresses, user agents, and a `Current Device` badge.
    - Revoke individual remote sessions, or click **"Revoke All Other Sessions"**.

@@ -1,19 +1,23 @@
 # Workshop Task 1: Time-Window Policy Rule (ABAC)
 
 ## Objective
+
 Implement a context-aware Attribute-Based Access Control (ABAC) rule inside `can()` that restricts sensitive operations (`"delete"` and `"export"`) to official business hours: **08:00 to 18:00, Monday through Friday**, in a configurable timezone (default: `"America/New_York"`).
 
 ---
 
 ## File to Edit
+
 - `server/src/services/authz.ts`
 
 ---
 
 ## Background & Real-World Context
+
 Why do role-based permissions (RBAC) fall short for sensitive operations?
 Even if an employee has the `"admin"` role, should they be able to export the company customer database or purge user records at 3:00 AM on a Sunday from an overseas IP address?
 In Zero-Trust architectures, **context matters**:
+
 - **Subject attributes:** Role, department, MFA status.
 - **Action & Resource:** Exporting database records, deleting accounts.
 - **Environment Context:** Time of day, day of week, geolocation, device posture.
@@ -23,6 +27,7 @@ In Zero-Trust architectures, **context matters**:
 ## Requirements
 
 ### 1. `isWithinBusinessHours(timestamp: number, timezone: string): boolean`
+
 - Evaluates whether the timestamp falls on a **weekday (Monday–Friday)**.
 - Evaluates whether the local time is **between 08:00:00 (inclusive) and 18:00:00 (exclusive)**:
   - `07:59:59` → Closed (`false`)
@@ -33,9 +38,10 @@ In Zero-Trust architectures, **context matters**:
 - **Daylight Saving Time (DST):** Must accurately adjust for DST transitions (e.g. UTC-5 in winter vs. UTC-4 in summer for `America/New_York`).
 
 ### 2. `timeWindowRule: PolicyRule`
+
 - Check if `action` is one of `["delete", "export"]`. If not, return `null` (allow standard read/profile operations to proceed unaffected).
 - Resolve clock: use `context.now ?? realClock`.
-- Resolve timezone: use `context.timezone || process.env.BUSINESS_TIMEZONE || "America/New_York"`.
+- Resolve timezone: use `context.timezone || process.env.BUSINESS_TIMEZONE || Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York"`. *(Using `Intl.DateTimeFormat().resolvedOptions().timeZone` ensures that when you test the dashboard locally in your browser, the business hours window evaluates against your local machine timezone).*
 - If outside business hours:
   Return `{ allow: false, reason: "Sensitive action '...' is only permitted during business hours (08:00-18:00 Mon-Fri in ...)" }`.
 - If inside business hours:
@@ -46,6 +52,7 @@ In Zero-Trust architectures, **context matters**:
 ## Implementation Hints
 
 ### Using `Intl.DateTimeFormat` for Timezone & DST
+
 JavaScript's built-in `Intl.DateTimeFormat` can format any Unix timestamp into specific timezone components without external date libraries:
 
 ```typescript
@@ -77,6 +84,7 @@ if (hour === 24) hour = 0;
 ```
 
 ### Checking Weekdays and Seconds Range
+
 ```typescript
 const isWeekend = weekday === "Sat" || weekday === "Sun";
 if (isWeekend) return false;
@@ -91,8 +99,11 @@ return totalSeconds >= startSeconds && totalSeconds < endSeconds;
 ---
 
 ## Verification
+
 Run the task test suite:
+
 ```bash
 npx vitest run test/task1-time-window.test.ts
 ```
+
 When your implementation is correct, all 9 tests will pass!
